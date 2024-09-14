@@ -1,0 +1,4 @@
+keyboard~=0.13.5
+PyQt5~=5.15.11
+pillow~=10.2.0
+Send2Trash~=1.8.3
