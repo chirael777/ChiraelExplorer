@@ -1,5 +1,12 @@
 # Changelog
 
+## [Version 1.1.2] 2024-9-15
+### Added:
++ addButton to add fastDirs for fastBar
+### Fixed:
+* Settings Button in fastBar isn't in the cBar of the fastBar
+* Cannot show names and icons of disks in fastBar
+
 ## [Version 1.1.1] 2024-9-14
 Typed for five days
 ### Added:

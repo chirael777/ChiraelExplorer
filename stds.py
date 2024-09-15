@@ -239,8 +239,9 @@ class Icon:
             self.add("yml","yaml","yml")
             self.add("zip","zip","rar","gz","7z","tar")
 
-            self.add("ui/settings","*settings")
+            self.add("ui/adds","*adds")
             self.add("ui/add","*add")
+            self.add("disk","*disk")
 
 
     def add(self,*args):
@@ -668,12 +669,12 @@ class cBar(QLabel):
             self.orderButton.setText("按照文件名 Z-A")
             self.orderButton.setToolTip("按照反字典法排序(文件优先)")
             self.master.sortOrder="za"
-            logger.info("Setting file-sort-order to Z-A")
+            logger.info("add file-sort-order to Z-A")
         elif(self.master.sortOrder=="za"):
             self.orderButton.setText("按照文件名 A-Z")
             self.orderButton.setToolTip("按照字典法排序(文件夹优先)")
             self.master.sortOrder="az"
-            logger.info("Setting file-sort-order to A-Z")
+            logger.info("add file-sort-order to A-Z")
         self.master.reFile()
     def resizeEvent(self, a0):
         w=self.width()
@@ -773,25 +774,37 @@ class fastLine(QPushButton):
         self.setIco(icons.get("*folder"))
         fm = QFontMetrics(qf)
 
+        if(self.absname[-2:]==":\\"):
+            self.name=self.absname[:-2]+"盘"
+            self.icoLabel.hide()
+            self.setIco(icons.get("*disk"))
         self.nameLabel=QLabel(self.name,self)
         self.nameLabel.setFont(qf)
         self.nameLabel.setStyleSheet("background-color:none;color:#000000;border:none")
         self.nameLabel.setGeometry(30,0,fm.width(self.name)+30,30)
 
-        self.setToolTip(self.name if(self.absname[0]=="*") else self.absname)
+        self.setToolTip(self.absname)
         self.addMenu()
         self.customContextMenuRequested.connect(self.onMenu)
     def addMenu(self):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.menu = QMenu(self)
 
-        execute = QAction("启动" if self.absname[0]=="*" else "在新标签页打开",self)
+        execute = QAction("在新标签页打开",self)
         execute.setIcon(QIcon("assets/ico/ui/exec.png"))
         execute.triggered.connect(self.exec)
 
+        dele = QAction("在快捷访问栏删除",self)
+        dele.setIcon(QIcon("assets/ico/ui/x.png"))
+        dele.triggered.connect(self.dele)
+
         self.menu.addAction(execute)
+        self.menu.addAction(dele)
     def onMenu(self, position):
         self.menu.exec_(self.mapToGlobal(position))
+    def dele(self):
+        del self.master.master.config.get("fastDirs")[self.parent().fastLines.index(self)]
+        self.parent().initFL(self.master.master.config.get("fastDirs"))
 
     def setIco(self,ico:QPixmap):
         self.icoLabel=QLabel(self)
@@ -832,15 +845,11 @@ class fastLine(QPushButton):
     def mouseDoubleClickEvent(self, a0):
         self.exec()
         super().mousePressEvent(a0)
-    def keyPressEvent(self, a0):
-        if(a0.key()==Qt.Key_Return):
-            self.exec()
-        super().keyPressEvent(a0)
     def exec(self):
         self.master.execFile(self)
 class fastBox(QLabel):
     def __init__(self, master:QWidget,fastDirs:list):
-        self.fastDirs = sorted(fastDirs)
+        self.fastDirs=fastDirs
         self.fastLines = []
         super().__init__(master)
 
@@ -864,24 +873,34 @@ class fastBox(QLabel):
         self.cBar.setStyleSheet(self.titleLabel.styleSheet())
         self.cBar.setGeometry(0,60,240,30)
 
-        self.initFL()
+        self.settingsButton = Button(self.cBar)
+        self.settingsButton.setIcon(QIcon("assets/ico/ui/settings.png"))
+        self.settingsButton.setGeometry(0,5,20,20)
+        self.settingsButton.setToolTip("设置")
+        
+        self.addButton = Button(self.cBar)
+        self.addButton.setIcon(QIcon("assets/ico/ui/add.png"))
+        self.addButton.setGeometry(25,5,20,20)
+        self.addButton.clicked.connect(self.master.addFast)
+        self.addButton.setToolTip("添加文件夹")
+
+        self.initFL(self.fastDirs)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.upd)
         self.timer.start(10)
-    def initFL(self):
+    def initFL(self,dirs):
+        self.fastDirs=dirs
         logger.info("Adding fastDirs")
         for i in self.fastLines:
             i.hide()
             del i
-
-        self.settingFL = fastLine("*01\\设置",self)
-        self.settingFL.icoLabel.hide()
-        self.settingFL.setIco(icons.get("*settings"))
-        self.fastLines.append(self.settingFL)
+        self.fastLines=[]
 
         for i in self.fastDirs:
             if(os.path.isabs(i) and os.path.exists(i) and (os.path.isdir(i) or os.path.ismount(i)) or (not i.replace(" ",""))):
-                self.fastLines.append(fastLine(i,self))
+                f=fastLine(i,self)
+                self.fastLines.append(f)
+                f.show()
             else:
                 logger.error(f"'{i}' is not an absolute path of directory that exists and is legitimate, and is not added")
                 showError(f"{i} 不是存在且合法的绝对文件夹路径，不添加")
@@ -913,3 +932,10 @@ class fastBox(QLabel):
     def execFile(self,obj:fastLine):
         if(obj.absname[0]!="*"):
             self.master.executeFile(obj,"ctrl")
+
+
+    def keyPressEvent(self, a0):
+        if(a0.key()==Qt.Key_Return):
+            for i in self.fastLines:
+                if(i.isclicked):i.exec()
+        super().keyPressEvent(a0)

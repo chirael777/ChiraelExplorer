@@ -460,6 +460,23 @@ class ChiraelExplorer(QWidget):
         qmd = QMimeData()
         qmd.setText("\n".join(fls))
         clpd.setMimeData(qmd)
+    def addFast(self):
+        add = renameDialog()
+        add.setWindowTitle("添加目录......")
+        logger.info("Adding fast dirs......")
+        add.exec_()
+        if(add.accepted):
+            filename = add.lineEdit.text()
+            if(add.is_accepted and filename):
+                if(os.path.isabs(filename) and os.path.exists(filename) and os.path.isdir(filename)):
+                    self.config.get('fastDirs').append(filename.replace("/","\\"))
+                    self.fastBox.initFL(self.config.get('fastDirs'))
+                else:
+                    showError("这就是不是存在的绝对路径")
+                    logger.info("Cancelled: invalid dirname")
+            else:logger.info("Cancelled : User")
+
+
 
 if __name__ == "__main__":
     m = ChiraelExplorer(sys.argv)
