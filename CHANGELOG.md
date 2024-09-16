@@ -1,5 +1,16 @@
 # Changelog
 
+## [Version 1.1.3] 2024-9-16
+### Added:
++ Separate context menu for the directory(same as file's)
++ "file" key in "bg" from config.json
++ The right-click menu of the directory allows you to add the current directory to the Quick Access bar
+### Fixed:
+* When refreshing a directory with a lot of files, it keeps getting stuck and doesn't show progress
+* Cannot delete a fastDir by pressing DELETE
+### Removed:
+- Automatically configure background images
+
 ## [Version 1.1.2] 2024-9-15
 ### Added:
 + addButton to add fastDirs for fastBar
@@ -65,7 +76,7 @@ Wow, this is the tenth update
 ## [Version 1.0.6] 2024-9-7
 ### Added:
 + Changed the + 〇 icon from text to image icon
-+ Added a getMaster method to the Chirael_Explorer class as well
++ Added a getMaster method to the Silicon_Explorer class as well
 + Added a fastLine class.
 + Added a settings bar to the Quick Access bar (although it doesn't respond after double-clicking)
 ### Fixed:

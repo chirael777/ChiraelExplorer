@@ -21,9 +21,13 @@ fileMenus=[[
     "notepad <s>",
     "assets/ico/txt.png"
 ]]
+folderMenus=[]
 def setfileMenu(fm:list[list]):
     global fileMenus
-    fileMensu=fm
+    fileMenus=fm
+def setfolderMenu(fm:list[list]):
+    global folderMenus
+    folderMenus=fm
 def setAlpha(boolean):
     global alpha
     alpha=2-int(bool(boolean))
@@ -338,6 +342,7 @@ class fileLine(QPushButton):
         self.infoButton.setIcon(QIcon("assets/ico/ui/info.png"))
         self.infoButton.move(w-45,5)
         self.infoButton.setToolTip("信息")
+        self.infoButton.clicked.connect(self.info)
 
         self.delButton=QPushButton(self)
         self.delButton.setFont(qf)
@@ -371,7 +376,9 @@ class fileLine(QPushButton):
         self.execButton.setToolTip("运行")
 
         self.ToolTip_ed = 0
-
+    def info(self):
+        infow = Information(self.absname)
+        infow.show()
     def rename(self):
         logger.info("Renaming "+self.absname)
         qd = renameDialog()
@@ -720,12 +727,15 @@ class fileBox(QLabel):
         if(x-self.x()>0 and y>90):
             index = (y-90+self.master.slider.value())//30
             if(index<self.master.fileLines.__len__()):
-                if(self.master.fileLines[index].isclicked):
-                    fileMenu(self.master.fileLines[index],self).exec_(self.mapToGlobal(a0.pos()))
+                fl:fileLine = self.master.fileLines[index]
+                if(fl.isclicked):
+                    fileMenu(fl,self,fl.type).exec_(self.mapToGlobal(a0.pos()))
                     return
+                else:fileMenu(fileLine(self.master.dirs[self.master.nowDir],self),self,"*folder").exec_(self.mapToGlobal(a0.pos()))
+            else:fileMenu(fileLine(self.master.dirs[self.master.nowDir],self),self,"*folder").exec_(self.mapToGlobal(a0.pos()))
         super().mouseMoveEvent(a0)
 class fileMenu(QMenu):
-    def __init__(self,fl:fileLine,master:QWidget):
+    def __init__(self,fl:fileLine,master:QWidget,type:str):
         super().__init__(master)
         self.fl = fl
         self.master=master.getMaster()
@@ -753,12 +763,26 @@ class fileMenu(QMenu):
             cc=c.replace("<s>",path).split()
             logger.info(f"Executing {cc}")
             subprocess.Popen(cc,shell=True)
-        for i in fileMenus:
-            ii = QAction(i[0],self)
-            ii.triggered.connect(lambda :exec_(i[1],self.fl.absname))
-            if(i.__len__()>2):ii.setIcon(QIcon(i[2]))
-            self.addAction(ii)
-
+        if(not "*" in type):
+            for i in fileMenus:
+                ii = QAction(i[0],self)
+                ii.triggered.connect(lambda :exec_(i[1],self.fl.absname))
+                if(i.__len__()>2):ii.setIcon(QIcon(i[2]))
+                self.addAction(ii)
+        else:
+            addF  =QAction("添加到快捷访问栏",self)
+            addF.triggered.connect(self.add2F)
+            self.addAction(addF)
+            for i in folderMenus:
+                ii = QAction(i[0],self)
+                ii.triggered.connect(lambda :exec_(i[1],self.fl.absname))
+                if(i.__len__()>2):ii.setIcon(QIcon(i[2]))
+                self.addAction(ii)
+        info = QAction("属性",self)
+        info.setIcon(QIcon("assets/ico/ui/info.png"))
+        info.triggered.connect(self.fl.infoButton.click)
+        self.addAction(info)
+    def add2F(self):self.master.config.get('fastDirs').append(self.fl.absname.replace("/","\\"));self.master.fastBox.initFL(self.master.config.get('fastDirs'))
 
 
 class fastLine(QPushButton):
@@ -805,6 +829,8 @@ class fastLine(QPushButton):
     def dele(self):
         del self.master.master.config.get("fastDirs")[self.parent().fastLines.index(self)]
         self.parent().initFL(self.master.master.config.get("fastDirs"))
+    def keyPressEvent(self, a0):
+        if(a0.key()==Qt.Key_Delete):self.dele()
 
     def setIco(self,ico:QPixmap):
         self.icoLabel=QLabel(self)
@@ -939,3 +965,10 @@ class fastBox(QLabel):
             for i in self.fastLines:
                 if(i.isclicked):i.exec()
         super().keyPressEvent(a0)
+
+class Information(QWidget):
+    def __init__(self,absname:str):
+        super().__init__()
+        self.absname=absname
+        self.name = os.path.basename(absname)
+        self.setWindowTitle("属性 "+self.name)

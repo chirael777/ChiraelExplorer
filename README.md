@@ -1,5 +1,6 @@
-# Chirael Explorer
+# Silicon Explorer
 It's a file management tool inspired by Windows Explorer, but with unique improvements and features.  
+U can call it SE.  
 Changelogs: [CHANGELOG.md](./CHANGELOG.md)
 ## Installation
 1. Download the compressed file of the source code and extract it.
@@ -16,6 +17,7 @@ Just edit config.json.
 {
   "bg": {
     "enabled": 0,
+    "file": "",
     "stretch": 0
   },
   "font": {
@@ -35,16 +37,25 @@ Just edit config.json.
   "menus":{
     "file":[
       ["用记事本打开","notepad <s>","assets/ico/txt.png"]
+    ],
+    "folder": [
+      ["CMD","cmd","assets/ico/bat.png"]
     ]
   }
 }
 ```
+#### "file" in "bg" should be in "assets/background"
+> **Example**  
+> If you have an image in assets/background named BG.png  
+> Just type "BG.png"
 #### The way to add an item to the context menu:
-##### Add a new list to the "files" of "menus".
+##### Add a new list to the "file" of "menus".
 + It should be read`[textOnItem,command,iconForItem]`
 + textOnItem should be a string;
 + command should be a command in console(`<s>` will be replaced to the path of the file)  
 + ionForItem should be the path of the icon
+##### Add a new list to the "folder" of "menus".
++ The same as file's
 ### Warning:
 - If there is no config.json, the program will be generated automatically.
 - If your config.json is formatted incorrectly, the program will <u>**overwrite**</u> it with the default configuration!
@@ -53,7 +64,7 @@ Thanks to everyone who has contributed to this project!
 ## Author
 - Name: `澈七` `Chirael7`
 - [Bilibili](https://space.bilibili.com/1268117780): `https://space.bilibili.com/1268117780`
-- [Github](https://github.com/chirael777): `https://github.com/chirael777`
+- [Github](https://github.com/Chirael777): `https://github.com/Chirael777`
 ## License
 This project is open-source and available under the `MIT License`.
 ### Hotkeys

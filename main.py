@@ -7,15 +7,17 @@ import subprocess
 import sys
 import keyboard
 import pyperclip
+from PIL.Image import Image
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PyQt5.QtGui import QPixmap,QImage
+from moviepy.video.io.VideoFileClip import VideoFileClip
 
 app = QApplication([])
 clpd = app.clipboard()
 from stds import *
 
-class ChiraelExplorer(QWidget):
+class SiliconExplorer(QWidget):
     def __init__(self,argv):
         super().__init__()
         self.setWindowTitle("文件资源管理器")
@@ -30,6 +32,7 @@ class ChiraelExplorer(QWidget):
         self.config={
             "bg": {
                 "enabled": 0,
+                "file":"",
                 "stretch": 0,
             },
             "font": {
@@ -48,18 +51,24 @@ class ChiraelExplorer(QWidget):
             "menus":{
                 "file":[
                     ["用记事本打开","notepad <s>","assets/ico/txt.png"]
+                ],
+                "folder": [
+                    ["CMD","cmd","assets/ico/bat.png"]
                 ]
             }
         }
+        self.Aconfig=0
         if(not os.path.exists("config.json")):
             showInfo("配置文件不存在，使用默认配置")
             json.dump(self.config,open("config.json","w",encoding="utf-8"),indent=4,ensure_ascii=False)
+            self.Aconfig=1
         elif(os.path.isfile("config.json")):
             try:
                 tmp_config=json.load(open("config.json","r",encoding="utf-8"))
                 if(tmp_config.keys()==self.config.keys()):
                     if(list(i>74for i in tmp_config.get("accentColor"))==[1,1,1]):
                         self.config=tmp_config
+                        self.Aconfig=1
                     else:showInfo("配置文件格式错误，使用默认配置")
                 else:showInfo("配置文件格式错误，使用默认配置")
             except:showError("配置文件语法错误，使用默认配置")
@@ -70,6 +79,7 @@ class ChiraelExplorer(QWidget):
         logger.info("Enabled logger")
         self.saveCfg()
         setfileMenu(self.config.get("menus").get("file"))
+        setfolderMenu(self.config.get("menus").get("folder"))
 
         f_config=self.config.get("font" )
         logger.info("Setting font")
@@ -99,14 +109,17 @@ class ChiraelExplorer(QWidget):
         self.setStyleSheet("background-color:#ffffff")
         logger.info("Making background")
         if os.path.exists("assets/background") and self.config.get("bg").get("enabled"):
-            picDir = [f for f in os.listdir("assets/background") if os.path.isfile(os.path.join("assets/background", f))]
-            if picDir:
+            if os.path.exists("assets/background/" +self.config.get("bg").get("file")):
+                self.BGpic = "assets/background/" + self.config.get("bg").get("file")
                 self.bg = QLabel(self)
                 self.bg.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                self.BGpic = "assets/background/" + random.choice(picDir)
-                self.bgImg = QPixmap(self.BGpic)
-                self.varUpdCodes.append("newimg=self.bgImg.scaled(self.width(), self.height()"+", Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation"*(not self.config.get("bg").get("stretch"))+")\nself.bg.setPixmap(newimg)\nself.bg.move(self.width()//2-newimg.size().width()//2,self.height()//2-newimg.size().height()//2)")
-                self.bg.setPixmap(self.bgImg)
+                try:
+                    self.bgImg = QPixmap(self.BGpic)
+                    self.varUpdCodes.append("newimg=self.bgImg.scaled(self.width(), self.height()"+", Qt.KeepAspectRatioByExpanding, Qt.SmoothTransformation"*(not self.config.get("bg").get("stretch"))+")\nself.bg.setPixmap(newimg)\nself.bg.move(self.width()//2-newimg.size().width()//2,self.height()//2-newimg.size().height()//2)")
+                    self.bg.setPixmap(self.bgImg)
+                except Exception as e:
+                    showError("无法读取背景图像"+self.config.get("bg").get("file"))
+            else:showError("配置文件配置的背景"+self.config.get("bg").get("file")+"不存在！")
         #右边那个显示文件的部分
         self.fileBox = fileBox(self)
         self.fileBox.setGeometry(0,0,960,600)
@@ -182,6 +195,11 @@ class ChiraelExplorer(QWidget):
 
         self.resize(960,600)
         logger.info("Finished initialization")
+    def updV(self):
+        self.nowFrame+=0.04
+        frame_image=PIL.Image.fromarray(self.v.get_frame(self.nowFrame))
+        self.bgImg=QPixmap.fromImage(QImage(frame_image.tobytes(), frame_image.size[0], frame_image.size[1], QImage.Format_RGB888))
+
     def movefileBox(self):
         if(self.fastBox.width()):
             self.fastBox.resize(0,0)
@@ -307,8 +325,9 @@ class ChiraelExplorer(QWidget):
         EXIT()
         super().closeEvent(a0)
     def saveCfg(self):
-        logger.info("Saving config")
-        json.dump(self.config,open("config.json","w",encoding="utf-8"),indent=4,ensure_ascii=False)
+        if(self.Aconfig):
+            logger.info("Saving config")
+            json.dump(self.config,open("config.json","w",encoding="utf-8"),indent=4,ensure_ascii=False)
     def newDir(self):
         logger.info("Creating new tab")
         self.dirs.append("")
@@ -338,7 +357,7 @@ class ChiraelExplorer(QWidget):
                     subprocess.run(f'{file.absname}',  creationflags=subprocess.CREATE_NEW_CONSOLE)
                 else:
                     logger.info(f'Starting "{file.absname}"')
-                    subprocess.Popen(['start', f'{file.absname}'],shell=True)
+                    subprocess.Popen([f'{file.absname}'],shell=True)
         except Exception as e:
             showError(f"访问失败!\n{e}")
             logger.error(f"Failed: {e}")
@@ -355,6 +374,8 @@ class ChiraelExplorer(QWidget):
         gc.collect()
         self.fileLines=[]
         fiLines,foLines=[],[]
+        t = 100/len(self.files)
+        tqdm = 0
         for i in self.files:
             l=self.dirs[self.nowDir]+"\\"+i
             if(os.path.isdir(l)):foLines.append(i)
@@ -365,10 +386,15 @@ class ChiraelExplorer(QWidget):
             fl=fileLine(self.dirs[self.nowDir]+"\\"+i,self.fileBox)
             fl.show()
             self.fileLines.append(fl)
+            tqdm+=t
+            self.setWindowTitle(f"正在刷新目录:"+"%10f"%(tqdm)+"%")
+        tqdm=100
+        self.setWindowTitle(f"正在刷新目录:"+"%10f"%(tqdm)+"%")
         self.slider.raise_()
         self.slider.setRange(0,(self.files.__len__()-1)*30)
         self.slider.setValue(min(self.slider.value(),(self.files.__len__()-1)*30))
         if(self.sortOrder=="za"):self.fileLines.reverse()
+        self.setWindowTitle("文件资源管理器")
     def up(self):#到父目录
         self.dirs[self.nowDir]=os.path.dirname(self.dirs[self.nowDir])
         logger.info("Returning to "+self.dirs[self.nowDir])
@@ -479,6 +505,6 @@ class ChiraelExplorer(QWidget):
 
 
 if __name__ == "__main__":
-    m = ChiraelExplorer(sys.argv)
+    m = SiliconExplorer(sys.argv)
     m.show()
     sys.exit(app.exec_())
